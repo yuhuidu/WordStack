@@ -86,4 +86,8 @@ public class LetterTile extends TextView {
     public String toString(){
         return letter.toString();
     }
+
+    public Character getChar(){
+        return letter;
+    }
 }

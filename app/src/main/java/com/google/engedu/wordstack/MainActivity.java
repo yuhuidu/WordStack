@@ -20,6 +20,7 @@ import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -73,41 +74,34 @@ public class MainActivity extends AppCompatActivity {
         verticalLayout.addView(stackedLayout, 3);
 
         View word1LinearLayout = findViewById(R.id.word1);
-        stackedLayout.setOnTouchListener(new TouchListener());
-
         word1LinearLayout.setOnDragListener(new DragListener());
         View word2LinearLayout = findViewById(R.id.word2);
-        //word2LinearLayout.setOnTouchListener(new TouchListener());
         word2LinearLayout.setOnDragListener(new DragListener());
-    }
 
-    private class TouchListener implements View.OnTouchListener {
-
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN && !stackedLayout.empty()) {
-                LetterTile tile = (LetterTile) stackedLayout.peek();
-                placeTiles.push(tile);
-                tile.moveToViewGroup((ViewGroup) v);
-                tile.freeze();
-
-                v.startDrag(
-                        ClipData.newPlainText("", ""),
-                        new View.DragShadowBuilder(tile),
-                        tile,
-                        0
-                );
-
-                if (stackedLayout.empty()) {
-                    TextView messageBox = (TextView) findViewById(R.id.message_box);
-                    messageBox.setText(word1 + " " + word2);
-                }
-                //
-                return true;
-            }
-            return false;
+        if(savedInstanceState!=null){
+            checkForDataAndRestoreGame(savedInstanceState);
         }
     }
+
+//    private class TouchListener implements View.OnTouchListener {
+//
+//        @Override
+//        public boolean onTouch(View v, MotionEvent event) {
+//            if (event.getAction() == MotionEvent.ACTION_DOWN && !stackedLayout.empty()) {
+//                LetterTile tile = (LetterTile) stackedLayout.peek();
+//                placeTiles.push(tile);
+//                tile.moveToViewGroup((ViewGroup) v);
+//                tile.freeze();
+//
+//                if (stackedLayout.empty()) {
+//                    TextView messageBox = (TextView) findViewById(R.id.message_box);
+//                    messageBox.setText(word1 + " " + word2);
+//                }
+//                return true;
+//            }
+//            return false;
+//        }
+//    }
 
 
     private class DragListener implements View.OnDragListener {
@@ -136,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
                     LetterTile tile = (LetterTile) event.getLocalState();
                     tile.moveToViewGroup((ViewGroup) v);
 
+                    placeTiles.push(tile);
                     tile.freeze();
 
                     if (stackedLayout.empty()) {
@@ -209,5 +204,76 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState){
+        ViewGroup word1LinearLayout = (ViewGroup) findViewById(R.id.word1);
+        ViewGroup word2LinearLayout = (ViewGroup) findViewById(R.id.word2);
+
+        char[] charWord1 = new char[word1LinearLayout.getChildCount()];
+        for (int i = 0; i < word1LinearLayout.getChildCount(); i++){
+            LetterTile letter = (LetterTile) word1LinearLayout.getChildAt(i);
+            charWord1[i] = letter.getChar();
+        }
+
+        char[] charWord2 = new char[word2LinearLayout.getChildCount()];
+        for (int i = 0; i < word2LinearLayout.getChildCount(); i++){
+            LetterTile letter = (LetterTile) word2LinearLayout.getChildAt(i);
+            charWord2[i] = letter.getChar();
+        }
+
+        //storing the letters the user already put in word1
+        outState.putCharArray("player word1",charWord1);
+
+        //storing the letters the user already put in word2
+        outState.putCharArray("player word2",charWord2);
+
+        char[] charTile = new char[stackedLayout.getStack().size()];
+        int size = stackedLayout.getStack().size();
+        for(int i = 0; i < size; i ++){
+            LetterTile letter = (LetterTile) stackedLayout.getStack().pop();
+            charTile[i] = letter.getChar();
+            Log.i("letter",letter.toString());
+        }
+
+        //storing the letters that are left in stacked layout tiles
+        outState.putCharArray("tile remaining",charTile);
+
+        //storing the original word1 and word2
+        outState.putString("word1", word1);
+        outState.putString("word1", word2);
+
+
+        super.onSaveInstanceState(outState);
+    }
+
+    public void checkForDataAndRestoreGame(Bundle savedInstanceState) {
+        if(savedInstanceState.getCharArray("player word1") != null){
+            ViewGroup word1LinearLayout = (ViewGroup) findViewById(R.id.word1);
+            for(int i = 0; i < savedInstanceState.getCharArray("player word1").length; i ++) {
+                LetterTile newTile = new LetterTile(this, savedInstanceState.getCharArray("player word1")[i]);
+                word1LinearLayout.addView(newTile);
+            }
+        }
+        if(savedInstanceState.getCharArray("player word2") != null){
+            ViewGroup word2LinearLayout = (ViewGroup) findViewById(R.id.word2);
+            for(int i = 0; i < savedInstanceState.getCharArray("player word2").length; i ++) {
+                LetterTile newTile = new LetterTile(this, savedInstanceState.getCharArray("player word2")[i]);
+                word2LinearLayout.addView(newTile);
+            }
+        }
+        if(savedInstanceState.getString("word1") != null){
+            this.word1=savedInstanceState.getString("word1");
+        }
+        if(savedInstanceState.getString("word2") != null){
+            this.word2=savedInstanceState.getString("word2");
+        }
+        if(savedInstanceState.getCharArray("tile remaining") != null){
+            for(int i = savedInstanceState.getCharArray("tile remaining").length - 1; i >= 0; i --) {
+                LetterTile newTile = new LetterTile(this, savedInstanceState.getCharArray("tile remaining")[i]);
+                stackedLayout.push(newTile);
+            }
+        }
     }
 }

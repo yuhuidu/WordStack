@@ -75,4 +75,8 @@ public class StackedLayout extends LinearLayout {
     public int getSize() {
         return tiles.size();
     }
+
+    public Stack<View> getStack(){
+        return tiles;
+    }
 }
