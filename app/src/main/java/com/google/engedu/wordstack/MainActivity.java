@@ -15,6 +15,7 @@
 
 package com.google.engedu.wordstack;
 
+import android.content.ClipData;
 import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private Random random = new Random();
     private StackedLayout stackedLayout;
     private String word1, word2;
+    private Stack <LetterTile> placeTiles = new Stack();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +73,12 @@ public class MainActivity extends AppCompatActivity {
         verticalLayout.addView(stackedLayout, 3);
 
         View word1LinearLayout = findViewById(R.id.word1);
-        word1LinearLayout.setOnTouchListener(new TouchListener());
-        //word1LinearLayout.setOnDragListener(new DragListener());
+        stackedLayout.setOnTouchListener(new TouchListener());
+
+        word1LinearLayout.setOnDragListener(new DragListener());
         View word2LinearLayout = findViewById(R.id.word2);
-        word2LinearLayout.setOnTouchListener(new TouchListener());
-        //word2LinearLayout.setOnDragListener(new DragListener());
+        //word2LinearLayout.setOnTouchListener(new TouchListener());
+        word2LinearLayout.setOnDragListener(new DragListener());
     }
 
     private class TouchListener implements View.OnTouchListener {
@@ -84,21 +87,28 @@ public class MainActivity extends AppCompatActivity {
         public boolean onTouch(View v, MotionEvent event) {
             if (event.getAction() == MotionEvent.ACTION_DOWN && !stackedLayout.empty()) {
                 LetterTile tile = (LetterTile) stackedLayout.peek();
+                placeTiles.push(tile);
                 tile.moveToViewGroup((ViewGroup) v);
+                tile.freeze();
+
+                v.startDrag(
+                        ClipData.newPlainText("", ""),
+                        new View.DragShadowBuilder(tile),
+                        tile,
+                        0
+                );
+
                 if (stackedLayout.empty()) {
                     TextView messageBox = (TextView) findViewById(R.id.message_box);
                     messageBox.setText(word1 + " " + word2);
                 }
-                /**
-                 **
-                 **  YOUR CODE GOES HERE
-                 **
-                 **/
+                //
                 return true;
             }
             return false;
         }
     }
+
 
     private class DragListener implements View.OnDragListener {
 
@@ -125,15 +135,14 @@ public class MainActivity extends AppCompatActivity {
                     // Dropped, reassign Tile to the target Layout
                     LetterTile tile = (LetterTile) event.getLocalState();
                     tile.moveToViewGroup((ViewGroup) v);
+
+                    tile.freeze();
+
                     if (stackedLayout.empty()) {
                         TextView messageBox = (TextView) findViewById(R.id.message_box);
                         messageBox.setText(word1 + " " + word2);
                     }
-                    /**
-                     **
-                     **  YOUR CODE GOES HERE
-                     **
-                     **/
+
                     return true;
             }
             return false;
@@ -141,6 +150,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean onStartGame(View view) {
+        LinearLayout word1LinearLayout = (LinearLayout) findViewById(R.id.word1);
+        LinearLayout word2LinearLayout = (LinearLayout) findViewById(R.id.word2);
+        word1LinearLayout.removeAllViews();
+        word2LinearLayout.removeAllViews();
+        stackedLayout.clear();
+
         TextView messageBox = (TextView) findViewById(R.id.message_box);
         messageBox.setText("Game started");
         int length = words.size();
@@ -182,15 +197,17 @@ public class MainActivity extends AppCompatActivity {
             LetterTile tile = new LetterTile(this, scrambled.charAt(i));
             stackedLayout.push(tile);
         }
+
         return true;
     }
 
     public boolean onUndo(View view) {
-        /**
-         **
-         **  YOUR CODE GOES HERE
-         **
-         **/
-        return true;
+        if(stackedLayout.getSize() < (WORD_LENGTH*2)){
+            LetterTile popped = placeTiles.pop();
+            popped.moveToViewGroup((ViewGroup) stackedLayout);
+
+            return true;
+        }
+        return false;
     }
 }
